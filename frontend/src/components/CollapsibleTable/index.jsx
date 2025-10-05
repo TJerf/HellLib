@@ -5,6 +5,7 @@ import { useState } from "react";
 import { format } from "date-fns-jalali";
 
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -23,9 +24,9 @@ import Typography from "@mui/material/Typography";
 import BasicModal from "@/components/BasicModal";
 import { enToFaDigit } from "@/helpers";
 
-function Row(props) {
-  const { row } = props;
+function Row({ data }) {
   const [open, setOpen] = useState(false);
+  const [rowData, setRowData] = useState(data);
 
   return (
     <>
@@ -40,13 +41,13 @@ function Row(props) {
           </IconButton>
         </TableCell>
         <TableCell component="th" scope="row">
-          {row.title}
+          {rowData.title}
         </TableCell>
-        <TableCell>{row.author}</TableCell>
-        <TableCell>{row.publisher}</TableCell>
-        <TableCell>{enToFaDigit(row.copies.toString())}</TableCell>
+        <TableCell>{rowData.author}</TableCell>
+        <TableCell>{rowData.publisher}</TableCell>
+        <TableCell>{enToFaDigit(rowData.copies.toString())}</TableCell>
         <TableCell>
-          <BasicModal rowData={row.name} />
+          <BasicModal rowData={rowData} setRowData={setRowData} />
         </TableCell>
       </TableRow>
       <TableRow>
@@ -64,10 +65,11 @@ function Row(props) {
                     <TableCell>کلاس</TableCell>
                     <TableCell>کد ملی</TableCell>
                     <TableCell>تاریخ بازپس گیری</TableCell>
+                    <TableCell></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {row.active_history.map((data) => (
+                  {rowData.active_history.map((data) => (
                     <TableRow
                       key={`${data.return_date}${data.student.national_code}`}
                     >
@@ -82,6 +84,28 @@ function Row(props) {
                       <TableCell>
                         {enToFaDigit(format(data.return_date, "yyyy-MM-dd"))}
                       </TableCell>
+                      <TableCell>
+                        <Button
+                          onClick={async () => {
+                            const res = await fetch(
+                              `/api/books/repossess/${data.id}`,
+                            );
+
+                            if (res.status != 200) return;
+
+                            let newData = { ...rowData };
+                            newData.copies += 1;
+                            newData.active_history =
+                              newData.active_history.filter(
+                                (history) => history.id != data.id,
+                              );
+
+                            setRowData(newData);
+                          }}
+                        >
+                          پس‌گرفتن
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -95,7 +119,7 @@ function Row(props) {
 }
 
 Row.propTypes = {
-  row: PropTypes.shape({
+  data: PropTypes.shape({
     title: PropTypes.string.isRequired,
     author: PropTypes.string.isRequired,
     copies: PropTypes.number.isRequired,
@@ -153,7 +177,7 @@ export default function CollapsibleTable({ rows }) {
             {rows
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((row) => (
-                <Row key={row.isbn} row={row} />
+                <Row key={row.isbn} data={row} />
               ))}
           </TableBody>
         </Table>
